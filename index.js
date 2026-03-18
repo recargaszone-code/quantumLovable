@@ -6,6 +6,12 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// ======================= FUNÇÃO NOVA - AI MESSAGE ID (10 a 30) =======================
+function gerarAIMessageId() {
+  const numeroAleatorio = Math.floor(Math.random() * 21) + 10; // gera 10 até 30
+  return `aimsg_${numeroAleatorio}kkyt3zepecssbne14fzpxjzz`;
+}
+
 // ======================= ENDPOINT PRINCIPAL =======================
 app.post('/send', async (req, res) => {
   const { token, projectId, message, intent = 'security_fix_v2' } = req.body;
@@ -17,7 +23,6 @@ app.post('/send', async (req, res) => {
     });
   }
 
-  // Headers stealth (mais parecido possível com browser real)
   const headers = {
     'Host': 'api.lovable.dev',
     'Connection': 'keep-alive',
@@ -34,8 +39,7 @@ app.post('/send', async (req, res) => {
     'Referer': 'https://lovable.dev/',
     'Accept-Encoding': 'gzip, deflate, br, zstd',
     'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
-    'Cookie': '__cf_bm=SEU_CF_BM_AQUI; ph_phc_xdBVCyOkYw40Pqd7xp5Er88lGq2IGFd4kZHRiKvvkjr_posthog=SEU_POSTHOG_AQUI' // opcional, mas ajuda muito
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36'
   };
 
   const payload = {
@@ -43,7 +47,7 @@ app.post('/send', async (req, res) => {
     message: message,
     intent: intent,
     chat_only: false,
-    ai_message_id: `aimsg_${Math.random().toString(36).slice(2, 12)}kkyt3zepecssbne14fzpxjzz`,
+    ai_message_id: gerarAIMessageId(),   // ← AGORA É aimsg_13kkyt... ou aimsg_27kkyt... (10~30)
     thread_id: 'main',
     view: 'security',
     view_description: 'Apenas Responda ao Usuario',
@@ -78,13 +82,14 @@ app.post('/send', async (req, res) => {
     res.json({
       success: true,
       message: '✅ Prompt Enviado com sucesso!',
+      ai_message_id_usado: payload.ai_message_id,   // só pra você ver qual número gerou
       lovableResponse: data
     });
 
   } catch (err) {
     res.status(500).json({
       success: false,
-      error: 'Falha ao conectar com Lovable: ' + err.message
+      error: 'Falha ao conectar: ' + err.message
     });
   }
 });
@@ -92,45 +97,28 @@ app.post('/send', async (req, res) => {
 // ======================= DOCUMENTAÇÃO =======================
 app.get('/docs', (req, res) => {
   res.send(`
-    <h1>🚀 Lovable Stealth Proxy API</h1>
-    <h2>Como usar</h2>
-    <p><strong>Endpoint:</strong> POST /send</p>
+    <h1>🚀 Quantum Lovable Proxy - Versão Final</h1>
+    <h2>Endpoint: POST /send</h2>
     
-    <h3>Body (JSON):</h3>
+    <h3>Body obrigatório:</h3>
     <pre>
 {
-  "token": "SEU_TOKEN_COMPLETO_AQUI",
+  "token": "seu_token_completo",
   "projectId": "bf5c0615-6f19-4e03-bc41-d881814c1532",
-  "message": "Eae mano como está?",
-  "intent": "security_fix_v2"   // opcional
+  "message": "sua mensagem aqui"
 }
     </pre>
 
-    <h3>Exemplo com curl:</h3>
-    <pre>
-curl -X POST https://SEU_APP.onrender.com/send \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "token": "eyJhbGciOiJSUzI1NiIs...",
-    "projectId": "bf5c0615-...",
-    "message": "Teste stealth"
-  }'
-    </pre>
+    <p><strong>ai_message_id agora gerado automaticamente:</strong><br>
+    aimsg_10kkyt3zepecssbne14fzpxjzz até aimsg_30kkyt3zepecssbne14fzpxjzz</p>
 
-    <p><strong>Resposta de sucesso:</strong></p>
-    <pre>{"success": true, "message": "✅ Prompt Enviado com sucesso!", ...}</pre>
-
-    <hr>
-    <p>Feito pra rodar no Render.com - token nunca fica salvo no servidor.</p>
+    <p>Deploy feito em: https://quantumlovable.onrender.com</p>
   `);
 });
 
-app.get('/', (req, res) => {
-  res.redirect('/docs');
-});
+app.get('/', (req, res) => res.redirect('/docs'));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
-  console.log(`📄 Documentação: http://localhost:${PORT}/docs`);
+  console.log(`✅ Servidor rodando em https://quantumlovable.onrender.com`);
 });
