@@ -45,7 +45,7 @@ app.post('/send', async (req, res) => {
   const payload = {
     id: `umsg_${Math.random().toString(36).slice(2, 15)}`,
     message: message,
-    intent: intent,
+    intent: "security_chat",
     chat_only: false,
     ai_message_id: gerarAIMessageId(),   // ← AGORA É aimsg_13kkyt... ou aimsg_27kkyt... (10~30)
     thread_id: 'main',
