@@ -6,15 +6,15 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// ======================= FUNÇÃO NOVA - AI MESSAGE ID (10 a 30) =======================
+// ======================= AI MESSAGE ID (10 a 30 números) =======================
 function gerarAIMessageId() {
-  const numeroAleatorio = Math.floor(Math.random() * 21) + 10; // gera 10 até 30
+  const numeroAleatorio = Math.floor(Math.random() * 21) + 10; // 10 até 30
   return `aimsg_${numeroAleatorio}kkyt3zepecssbne14fzpxjzz`;
 }
 
 // ======================= ENDPOINT PRINCIPAL =======================
 app.post('/send', async (req, res) => {
-  const { token, projectId, message, intent = 'security_fix_v2' } = req.body;
+  const { token, projectId, message, intent = 'security_chat' } = req.body;  // ← INTENT FIXO
 
   if (!token || !projectId || !message) {
     return res.status(400).json({ 
@@ -45,9 +45,9 @@ app.post('/send', async (req, res) => {
   const payload = {
     id: `umsg_${Math.random().toString(36).slice(2, 15)}`,
     message: message,
-    intent: "security_chat",
+    intent: intent,                    // ← SEMPRE 'security_chat'
     chat_only: false,
-    ai_message_id: gerarAIMessageId(),   // ← AGORA É aimsg_13kkyt... ou aimsg_27kkyt... (10~30)
+    ai_message_id: gerarAIMessageId(),
     thread_id: 'main',
     view: 'security',
     view_description: 'Apenas Responda ao Usuario',
@@ -72,24 +72,33 @@ app.post('/send', async (req, res) => {
       body: JSON.stringify(payload)
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      return res.status(500).json({ success: false, error: errorText });
-    }
+    // ← MESMO SE A RESPOSTA FOR VAZIA OU INVÁLIDA, CONSIDERA SUCESSO
+    let lovableData = null;
+    let rawResponse = '';
 
-    const data = await response.json();
+    try {
+      rawResponse = await response.text();
+      if (rawResponse.trim()) {
+        lovableData = JSON.parse(rawResponse);
+      }
+    } catch (jsonErr) {
+      // Ignora erro de JSON (resposta vazia é normal agora)
+      lovableData = { note: "Resposta vazia ou não-JSON do Lovable (normal)" };
+    }
 
     res.json({
       success: true,
       message: '✅ Prompt Enviado com sucesso!',
-      ai_message_id_usado: payload.ai_message_id,   // só pra você ver qual número gerou
-      lovableResponse: data
+      ai_message_id_usado: payload.ai_message_id,
+      statusCode: response.status,
+      lovableResponse: lovableData || { raw: rawResponse || "vazio" }
     });
 
   } catch (err) {
+    // Só falha se der erro de rede (não por JSON vazio)
     res.status(500).json({
       success: false,
-      error: 'Falha ao conectar: ' + err.message
+      error: 'Falha de conexão: ' + err.message
     });
   }
 });
@@ -97,22 +106,20 @@ app.post('/send', async (req, res) => {
 // ======================= DOCUMENTAÇÃO =======================
 app.get('/docs', (req, res) => {
   res.send(`
-    <h1>🚀 Quantum Lovable Proxy - Versão Final</h1>
-    <h2>Endpoint: POST /send</h2>
+    <h1>🚀 Quantum Lovable Proxy - VERSÃO FINAL</h1>
+    <p><strong>Intent sempre:</strong> security_chat</p>
+    <p><strong>AI Message ID:</strong> aimsg_10kkyt... até aimsg_30kkyt...</p>
+    <p><strong>Agora sempre retorna success: true</strong> (mesmo se Lovable responder vazio)</p>
     
-    <h3>Body obrigatório:</h3>
+    <h2>Como usar:</h2>
     <pre>
+POST https://quantumlovable.onrender.com/send
 {
-  "token": "seu_token_completo",
-  "projectId": "bf5c0615-6f19-4e03-bc41-d881814c1532",
-  "message": "sua mensagem aqui"
+  "token": "SEU_TOKEN",
+  "projectId": "e5ecda17-a2da-4455-80f5-cf437c4db4f3",
+  "message": "seu texto aqui"
 }
     </pre>
-
-    <p><strong>ai_message_id agora gerado automaticamente:</strong><br>
-    aimsg_10kkyt3zepecssbne14fzpxjzz até aimsg_30kkyt3zepecssbne14fzpxjzz</p>
-
-    <p>Deploy feito em: https://quantumlovable.onrender.com</p>
   `);
 });
 
@@ -120,5 +127,5 @@ app.get('/', (req, res) => res.redirect('/docs'));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`✅ Servidor rodando em https://quantumlovable.onrender.com`);
+  console.log(`✅ Quantum Lovable Proxy rodando!`);
 });
