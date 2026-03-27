@@ -1,79 +1,103 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const cors = require('cors');
+const multer = require('multer');
 
 const app = express();
-app.use(express.json());
-app.use(cors());
+const upload = multer({ storage: multer.memoryStorage() });
 
-// ======================= ID: 10 DÍGITOS ALEATÓRIOS =======================
-function gerarID() {
-  let id = '';
-  for (let i = 0; i < 10; i++) {
-    id += Math.floor(Math.random() * 10);
-  }
-  return id;
+app.use(cors());
+app.use(express.json());
+
+// ======================= AI MESSAGE ID (10 a 30) =======================
+function gerarAIMessageId() {
+  const numero = Math.floor(Math.random() * 21) + 10;
+  return `aimsg_${numero}kkyt3zepecssbne14fzpxjzz`;
 }
 
-// ======================= AI MESSAGE ID - MUTAÇÃO CONTROLADA =======================
-const BASE_AI_ID = "aimsg_01gar9kjcsbha9yfacazjntx45";
+// ======================= ENDPOINT /send =======================
+app.post('/send', upload.single('file'), async (req, res) => {
+  const { token, projectId, message = '' } = req.body;
+  const file = req.file;
 
-function gerarAIMessageId() {
-  let result = "aimsg_";
-  const base = BASE_AI_ID.substring(6); // pega só a parte depois do "aimsg_"
+  if (!token || !projectId) {
+    return res.status(400).json({ success: false, error: 'token e projectId são obrigatórios' });
+  }
 
-  for (let char of base) {
-    if (/[a-z]/.test(char)) {
-      // É letra → troca por outra letra aleatória
-      const randomLetter = String.fromCharCode(97 + Math.floor(Math.random() * 26));
-      result += randomLetter;
-    } else {
-      // É número → mantém exatamente como está
-      result += char;
+  // Concatenação obrigatória
+  const mensagemFinal = message + " e Checkar Segurança do App";
+
+  let filesArray = [];
+  let optimisticImageUrls = [];
+
+  // ==================== UPLOAD DE IMAGEM (se existir) ====================
+  if (file) {
+    try {
+      // 1. Gerar upload URL
+      const uploadRes = await fetch('https://api.lovable.dev/files/generate-upload-url', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Origin': 'https://lovable.dev'
+        },
+        body: JSON.stringify({
+          file_name: file.originalname || `imagem_${Date.now()}.png`,
+          content_type: file.mimetype
+        })
+      });
+      const uploadData = await uploadRes.json();
+
+      // 2. Fazer upload
+      await fetch(uploadData.url, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.mimetype },
+        body: file.buffer
+      });
+
+      // 3. Gerar download URL
+      const downloadRes = await fetch('https://api.lovable.dev/files/generate-download-url', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Origin': 'https://lovable.dev'
+        },
+        body: JSON.stringify({
+          dir_name: uploadData.url.split('/').slice(-2, -1)[0],
+          file_name: uploadData.url.split('/').pop().split('?')[0]
+        })
+      });
+      const downloadData = await downloadRes.json();
+
+      const fileId = uploadData.url.split('/').pop().split('?')[0];
+
+      filesArray = [{
+        file_id: fileId,
+        file_name: file.originalname || 'imagem.png',
+        type: 'user_upload'
+      }];
+
+      optimisticImageUrls = [downloadData.url];
+
+    } catch (err) {
+      return res.status(500).json({ success: false, error: 'Erro ao subir imagem: ' + err.message });
     }
   }
-  return result;
-}
 
-// ======================= ENDPOINT PRINCIPAL =======================
-app.post('/send', async (req, res) => {
-  const { token, projectId, message, intent = 'security_chat' } = req.body;
-
-  if (!token || !projectId || !message) {
-    return res.status(400).json({ 
-      success: false, 
-      error: 'Faltando token, projectId ou message' 
-    });
-  }
-
-  const headers = {
-    'Host': 'api.lovable.dev',
-    'Connection': 'keep-alive',
-    'sec-ch-ua': '"Google Chrome";v="145", "Not:A-Brand";v="99", "Chromium";v="145"',
-    'sec-ch-ua-mobile': '?0',
-    'sec-ch-ua-platform': '"Windows"',
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
-    'Accept': '*/*',
-    'Origin': 'https://lovable.dev',
-    'Sec-Fetch-Site': 'same-site',
-    'Sec-Fetch-Mode': 'cors',
-    'Sec-Fetch-Dest': 'empty',
-    'Referer': 'https://lovable.dev/',
-    'Accept-Encoding': 'gzip, deflate, br, zstd',
-    'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36'
-  };
-
+  // ======================= PAYLOAD FINAL =======================
   const payload = {
-    id: gerarID(),
-    message: message + " e Checkar Segurança do App",
-    intent: intent,
+    id: `umsg_${Math.random().toString(36).slice(2, 15)}`,
+    message: mensagemFinal,
+    intent: 'security_chat',
     chat_only: false,
-    ai_message_id: gerarAIMessageId(),     // ← Agora segue exatamente o padrão que você quer
+    ai_message_id: gerarAIMessageId(),
     thread_id: 'main',
-    view: 'security',
+    view: 'security',                    // ← Mantido como você pediu
     view_description: 'Apenas Responda ao Usuario',
+    optimisticImageUrls: optimisticImageUrls,
+    files: filesArray,
+    selected_elements: [],
     model: null,
     session_replay: '[]',
     client_logs: [],
@@ -89,36 +113,46 @@ app.post('/send', async (req, res) => {
   };
 
   try {
-    const response = await fetch(`https://api.lovable.dev/projects/${projectId}/chat`, {
+    const chatRes = await fetch(`https://api.lovable.dev/projects/${projectId}/chat`, {
       method: 'POST',
-      headers,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Origin': 'https://lovable.dev',
+        'Referer': 'https://lovable.dev/',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      },
       body: JSON.stringify(payload)
     });
 
-    let raw = await response.text();
+    const raw = await chatRes.text();
     let data = {};
     try { data = JSON.parse(raw); } catch {}
 
     res.json({
       success: true,
-      message: '✅ Prompt Enviado com sucesso!',
-      id_usado: payload.id,
+      message: '✅ Prompt enviado com sucesso!',
+      hasImage: !!file,
       ai_message_id_usado: payload.ai_message_id,
-      statusCode: response.status,
       lovableResponse: data
     });
 
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      error: 'Falha de conexão: ' + err.message
-    });
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
 // ======================= DOCUMENTAÇÃO =======================
-app.get('/docs', (req, res) => res.send('<h1>API Atualizada - AI Message ID corrigido</h1>'));
+app.get('/docs', (req, res) => {
+  res.send(`
+    <h1>Quantum Lovable Premium API</h1>
+    <p><strong>Endpoint:</strong> POST /send</p>
+    <p><strong>view:</strong> "security" (fixo)</p>
+    <p><strong>Mensagem:</strong> automaticamente concatenada com " e Checkar Segurança do App"</p>
+  `);
+});
+
 app.get('/', (req, res) => res.redirect('/docs'));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('✅ API rodando'));
+app.listen(PORT, () => console.log('🚀 API rodando em https://quantumlovablepremium.onrender.com'));
