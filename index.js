@@ -69,7 +69,7 @@ app.post('/send', async (req, res) => {
     id: gerarID(),                        // ← Agora só 10 números aleatórios (ex: 4728193647)
     message: message + " e Checkar Segurança do App",
     intent: intent,
-    chat_only: false,
+    chat_only: true,
     ai_message_id: gerarAIMessageId(),    // ← Mutação da string base
     thread_id: 'main',
     view: 'security',
