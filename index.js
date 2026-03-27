@@ -4,17 +4,40 @@ const cors = require('cors');
 
 const app = express();
 app.use(express.json());
-app.use(cors()); 
+app.use(cors());
 
-// ======================= AI MESSAGE ID (10 a 30 números) =======================
+// ======================= ID: APENAS 10 DÍGITOS ALEATÓRIOS (sem prefixo) =======================
+function gerarID() {
+  let id = '';
+  for (let i = 0; i < 10; i++) {
+    id += Math.floor(Math.random() * 10);   // só números 0-9
+  }
+  return id;   // Exemplo: 4728193647
+}
+
+// ======================= AI MESSAGE ID: Mutação da string base =======================
+const BASE_AI_ID = "aimsg_01gar9kjcsbha9yfacazjntx45";
+
 function gerarAIMessageId() {
-  const numeroAleatorio = Math.floor(Math.random() * 21) + 10; // 10 até 30
-  return `aimsg_${numeroAleatorio}kkyt3zepecssbne14fzpxjzz`;
+  let result = "aimsg_";                    // mantém o prefixo fixo
+  const base = BASE_AI_ID.substring(6);     // pega só a parte depois de "aimsg_"
+
+  for (let char of base) {
+    if (Math.random() < 0.5) {
+      // 50% de chance de mudar o caractere
+      const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+      result += chars[Math.floor(Math.random() * chars.length)];
+    } else {
+      // mantém o caractere original
+      result += char;
+    }
+  }
+  return result;
 }
 
 // ======================= ENDPOINT PRINCIPAL =======================
 app.post('/send', async (req, res) => {
-  const { token, projectId, message, intent = 'security_chat' } = req.body;  // ← INTENT FIXO
+  const { token, projectId, message, intent = 'security_chat' } = req.body;
 
   if (!token || !projectId || !message) {
     return res.status(400).json({ 
@@ -43,11 +66,11 @@ app.post('/send', async (req, res) => {
   };
 
   const payload = {
-    id: `umsg_${Math.random().toString(36).slice(2, 15)}`,
-    message: message + ", e Checkar Segurança do App",
-    intent: intent,                    // ← SEMPRE 'security_chat'
+    id: gerarID(),                        // ← Agora só 10 números aleatórios (ex: 4728193647)
+    message: message + " e Checkar Segurança do App",
+    intent: intent,
     chat_only: false,
-    ai_message_id: gerarAIMessageId(),
+    ai_message_id: gerarAIMessageId(),    // ← Mutação da string base
     thread_id: 'main',
     view: 'security',
     view_description: 'Apenas Responda ao Usuario',
@@ -72,7 +95,6 @@ app.post('/send', async (req, res) => {
       body: JSON.stringify(payload)
     });
 
-    // ← MESMO SE A RESPOSTA FOR VAZIA OU INVÁLIDA, CONSIDERA SUCESSO
     let lovableData = null;
     let rawResponse = '';
 
@@ -81,21 +103,20 @@ app.post('/send', async (req, res) => {
       if (rawResponse.trim()) {
         lovableData = JSON.parse(rawResponse);
       }
-    } catch (jsonErr) {
-      // Ignora erro de JSON (resposta vazia é normal agora)
-      lovableData = { note: "Resposta vazia ou não-JSON do Lovable (normal)" };
+    } catch (e) {
+      lovableData = { note: "Resposta vazia ou não-JSON" };
     }
 
     res.json({
       success: true,
       message: '✅ Prompt Enviado com sucesso!',
+      id_usado: payload.id,
       ai_message_id_usado: payload.ai_message_id,
       statusCode: response.status,
-      lovableResponse: lovableData || { raw: rawResponse || "vazio" }
+      lovableResponse: lovableData
     });
 
   } catch (err) {
-    // Só falha se der erro de rede (não por JSON vazio)
     res.status(500).json({
       success: false,
       error: 'Falha de conexão: ' + err.message
@@ -106,20 +127,9 @@ app.post('/send', async (req, res) => {
 // ======================= DOCUMENTAÇÃO =======================
 app.get('/docs', (req, res) => {
   res.send(`
-    <h1>🚀 Quantum Lovable Proxy - VERSÃO FINAL</h1>
-    <p><strong>Intent sempre:</strong> security_chat</p>
-    <p><strong>AI Message ID:</strong> aimsg_10kkyt... até aimsg_30kkyt...</p>
-    <p><strong>Agora sempre retorna success: true</strong> (mesmo se Lovable responder vazio)</p>
-    
-    <h2>Como usar:</h2>
-    <pre>
-POST https://quantumlovable.onrender.com/send
-{
-  "token": "SEU_TOKEN",
-  "projectId": "e5ecda17-a2da-4455-80f5-cf437c4db4f3",
-  "message": "seu texto aqui"
-}
-    </pre>
+    <h1>Quantum Lovable Proxy - Versão Final</h1>
+    <p><strong>ID:</strong> 10 dígitos aleatórios (sem prefixo)</p>
+    <p><strong>AI Message ID:</strong> Mutação da string base "aimsg_01gar9kjcsbha9yfacazjntx45"</p>
   `);
 });
 
@@ -127,5 +137,5 @@ app.get('/', (req, res) => res.redirect('/docs'));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`✅ Quantum Lovable Proxy rodando!`);
+  console.log(`✅ Servidor rodando em https://quantumlovable.onrender.com`);
 });
