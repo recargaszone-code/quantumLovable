@@ -13,11 +13,16 @@ app.use(cors());
 // ======================= AI MESSAGE ID (10 a 30 números) =======================
 
 function gerarAIMessageId() {
+  const prefixoFixo = "aimsg_02hhh9hhhhhhh9"; // até o último 9
 
-  const numeroAleatorio = Math.floor(Math.random() * 21) + 10; // 10 até 30
+  let parteAleatoria = '';
+  const letras = ['f', 'h']; // apenas f e h
 
-  return `aimsg_${numeroAleatorio}kkyt3zepecssbne14fzpxjzz`;
+  for (let i = 0; i < 10; i++) { // exatamente 10 caracteres
+    parteAleatoria += letras[Math.floor(Math.random() * letras.length)];
+  }
 
+  return prefixoFixo + parteAleatoria + "47";
 }
 
 // ======================= ENDPOINT PRINCIPAL =======================
