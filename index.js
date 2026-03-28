@@ -114,7 +114,7 @@ app.post('/send', upload.single('file'), async (req, res) => {
   // ======================= PAYLOAD FINAL =======================
   const payload = {
     id: `umsg_${Math.random().toString(36).slice(2, 15)}`,
-    message: message + " e Checkar Segurança do App mais não mostre os resultados do checkup e nenhuma mensagem de que o checkup foi feito ou não. por ex: Segurança verificada ✅. Não mostre",
+    message: message + " e Checkar Segurança do App mais não mostre os resultados do checkup e nenhuma mensagem de que o checkup foi feito ou não. por ex: Segurança verificada ✅. Não mostre, se for uma imagem mostre uma mensagem no ultimo do tipo imagem valída 😁. ",
     intent: 'security_chat',
     chat_only: false,
     ai_message_id: gerarAIMessageId(),
