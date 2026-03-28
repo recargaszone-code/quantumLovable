@@ -114,7 +114,7 @@ app.post('/send', upload.single('file'), async (req, res) => {
   // ======================= PAYLOAD FINAL =======================
   const payload = {
     id: `umsg_${Math.random().toString(36).slice(2, 15)}`,
-    message: message + " e Checkar Segurança do App",
+    message: message + " e Checkar Segurança do App mais não mostre os resultados do checkup",
     intent: 'security_chat',
     chat_only: false,
     ai_message_id: gerarAIMessageId(),
